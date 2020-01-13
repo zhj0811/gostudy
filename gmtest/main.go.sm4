@@ -1,0 +1,73 @@
+package main
+
+import (
+	"bytes"
+	"github.com/tjfoc/gmsm/sm4"
+	"fmt"
+	// "os"
+	"github.com/op/go-logging"
+	"crypto/cipher"
+)
+
+var log = logging.MustGetLogger("gmtest")
+
+// package-scoped constants
+// const packageName = "apiserver"
+
+func init() {
+	format := logging.MustStringFormatter("%{shortfile} %{time:2006-01-02 15:04:05.000} [%{module}] %{level:.4s} : %{message}")
+	backend := logging.NewLogBackend(os.Stderr, "", 0)
+	backendFormatter := logging.NewBackendFormatter(backend, format)
+
+	logging.SetBackend(backendFormatter)
+}
+
+func main(){
+	// 128比特密钥
+	key := []byte("1234567890abcdef")
+	// 128比特iv
+	iv := make([]byte, sm4.BlockSize)
+	data := []byte("Tongji Fintech Research Institute")
+	ciphertxt,err := sm4Encrypt(key,iv, data)
+	if err != nil{
+		log.Fatal(err)
+	}
+	fmt.Printf("加密结果: %x\n", ciphertxt)
+}
+
+func sm4Encrypt(key, iv, plainText []byte) ([]byte, error) {
+	block, err := sm4.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	blockSize := block.BlockSize()
+	origData := pkcs5Padding(plainText, blockSize)
+	blockMode := cipher.NewCBCEncrypter(block, iv)
+	cryted := make([]byte, len(origData))
+	blockMode.CryptBlocks(cryted, origData)
+	return cryted, nil
+}
+
+func sm4Decrypt(key, iv, cipherText []byte) ([]byte, error) {
+	block, err := sm4.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	blockMode := cipher.NewCBCDecrypter(block, iv)
+	origData := make([]byte, len(cipherText))
+	blockMode.CryptBlocks(origData, cipherText)
+	origData = pkcs5UnPadding(origData)
+	return origData, nil
+}
+// pkcs5填充
+func pkcs5Padding(src []byte, blockSize int) []byte {
+	padding := blockSize - len(src)%blockSize
+	padtext := bytes.Repeat([]byte{byte(padding)}, padding)
+	return append(src, padtext...)
+}
+
+func pkcs5UnPadding(src []byte) []byte {
+	length := len(src)
+	unpadding := int(src[length-1])
+	return src[:(length - unpadding)]
+}
