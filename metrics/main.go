@@ -67,5 +67,6 @@ func main() {
 	router.Run(":8080") // listen and server on 0.0.0.0:8080(default)
 
 	// http.Handle("/metrics", promhttp.Handler())
+	// http.FileServer 实现静态文件服务
 	// http.ListenAndServe(":9090", nil)
 }
