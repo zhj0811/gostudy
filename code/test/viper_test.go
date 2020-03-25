@@ -44,6 +44,12 @@ func TestViper(t *testing.T) {
 	abcdValuea := viper.GetString("peer.abcd")
 	t.Log("abcdValuea is:", abcdValuea)
 }
+
+func TestFlag(t *testing.T){
+	file := filepath.Join("./core.yaml")
+	t.Log(file)
+	// t.Errorf(file)
+}
 /***
 //core.yaml
 statetransfer:
@@ -59,11 +65,11 @@ peer:
 */
 
 
-#go build main exec.out
-#$CORE_SECURITY_ENABLED=true ./exec.out == $CORE_SECURITY_ENABLED=true go run main.go
+// #go build main exec.out
+// #$CORE_SECURITY_ENABLED=true ./exec.out == $CORE_SECURITY_ENABLED=true go run main.go
 
-#$CORE_SECURITY_ENABLED=true
-#$./exec.out
+// #$CORE_SECURITY_ENABLED=true
+// #$./exec.out
 
 
 /**
