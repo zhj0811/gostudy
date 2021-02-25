@@ -1,6 +1,7 @@
 package test
 
-import(
+import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
@@ -8,6 +9,7 @@ import(
 
 	"github.com/spf13/viper"
 )
+
 //	viper 从环境变量或配置文件中读取信息
 func TestViper(t *testing.T) {
 	//从环境变量中读取CORE_**_**
@@ -16,7 +18,7 @@ func TestViper(t *testing.T) {
 	replacer := strings.NewReplacer(".", "_")
 	viper.SetEnvKeyReplacer(replacer)
 
-	file := filepath.Join("./"+"core.yaml")
+	file := filepath.Join("./" + "core.yaml")
 	viper.SetConfigFile(file)
 	//从文件./config.* 读取信息
 	//viper.SetConfigName("core")
@@ -36,7 +38,7 @@ func TestViper(t *testing.T) {
 
 	//export CORE_SECURITY_ENABLED=true
 	environment := viper.GetBool("security.enabled")
-	t.Log("environment:", environment)	//environment:true
+	t.Log("environment:", environment) //environment:true
 
 	fullstate := viper.GetString("statetransfer.timeout.fullstate")
 	t.Logf("fullstate:%s", fullstate)
@@ -45,11 +47,84 @@ func TestViper(t *testing.T) {
 	t.Log("abcdValuea is:", abcdValuea)
 }
 
-func TestFlag(t *testing.T){
+func TestFlag(t *testing.T) {
 	file := filepath.Join("./core.yaml")
 	t.Log(file)
 	// t.Errorf(file)
 }
+
+func TestENVConfig(t *testing.T) {
+	file := filepath.Join("./core.yaml")
+	viper.SetConfigFile(file)
+	if err := viper.ReadInConfig(); err != nil {
+		t.Errorf("viper.ReadInConfig error: %s", err.Error())
+		return
+	}
+	envpath := viper.GetString("test")
+	envpath = Subst(envpath)
+	t.Logf("value: %s", envpath)
+	return
+}
+
+// Subst replaces instances of '${VARNAME}' (eg ${GOPATH}) with the variable.
+// Variables names that are not set by the SDK are replaced with the environment variable.
+func Subst(path string) string {
+	const (
+		sepPrefix = "${"
+		sepSuffix = "}"
+	)
+
+	splits := strings.Split(path, sepPrefix)
+
+	var buffer bytes.Buffer
+
+	// first split precedes the first sepPrefix so should always be written
+	buffer.WriteString(splits[0]) // nolint: gas
+
+	for _, s := range splits[1:] {
+		subst, rest := substVar(s, sepPrefix, sepSuffix)
+		buffer.WriteString(subst) // nolint: gas
+		buffer.WriteString(rest)  // nolint: gas
+	}
+
+	return buffer.String()
+}
+
+// substVar searches for an instance of a variables name and replaces them with their value.
+// The first return value is substituted portion of the string or noMatch if no replacement occurred.
+// The second return value is the unconsumed portion of s.
+func substVar(s string, noMatch string, sep string) (string, string) {
+	endPos := strings.Index(s, sep)
+	if endPos == -1 {
+		return noMatch, s
+	}
+
+	v, ok := lookupVar(s[:endPos])
+	if !ok {
+		return noMatch, s
+	}
+
+	return v, s[endPos+1:]
+}
+
+// lookupVar returns the value of the variable.
+// The local variable table is consulted first, followed by environment variables.
+// Returns false if the variable doesn't exist.
+func lookupVar(v string) (string, bool) {
+	// TODO: optimize if the number of variable names grows
+	//switch v {
+	////case "FABRIC_SDK_GO_PROJECT_PATH":
+	////	return metadata.GetProjectPath(), true
+	////case "GOPATH":
+	////	return goPath(), true
+	////case "CRYPTOCONFIG_FIXTURES_PATH":
+	////	return metadata.CryptoConfigPath, true
+	//case "GOHFC_PATH":
+	//	return os.Getenv("GOHFC_PATH"), true
+	//}
+	return os.LookupEnv(v)
+}
+
 /***
 //core.yaml
 statetransfer:
@@ -64,13 +139,11 @@ peer:
     abcd:   3322d
 */
 
-
 // #go build main exec.out
 // #$CORE_SECURITY_ENABLED=true ./exec.out == $CORE_SECURITY_ENABLED=true go run main.go
 
 // #$CORE_SECURITY_ENABLED=true
 // #$./exec.out
-
 
 /**
 package main

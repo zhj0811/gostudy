@@ -1,2 +1,6 @@
-!/vendor
+*.exe
+
+
+**/vendor
 .idea/
+.vscode
